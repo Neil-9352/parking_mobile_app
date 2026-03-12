@@ -62,12 +62,20 @@ const BookingCard = ({ booking, onCancel }) => {
           <Text style={styles.value}>{formatDate(booking.booking_time)}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.label}>Start</Text>
+          <Text style={styles.label}>Expected Start</Text>
           <Text style={styles.value}>{formatDate(booking.expected_start_time)}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.label}>End</Text>
+          <Text style={styles.label}>Expected End</Text>
           <Text style={styles.value}>{formatDate(booking.expected_end_time)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual In</Text>
+          <Text style={styles.value}>{formatDate(booking.actual_in_time)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual Out</Text>
+          <Text style={styles.value}>{formatDate(booking.actual_out_time)}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Deposit</Text>

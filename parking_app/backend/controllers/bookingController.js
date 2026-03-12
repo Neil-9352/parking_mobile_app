@@ -146,10 +146,17 @@ const getMyBookings = async (req, res) => {
         ps.slot_no,
         ps.slot_id,
         pl.lot_name,
-        pl.lot_id
+        pl.lot_id,
+        pi.in_time  AS actual_in_time,
+        pi.out_time AS actual_out_time
       FROM books b
       JOIN parking_slot ps ON b.slot_id = ps.slot_id
       JOIN parking_lot pl ON ps.lot_id = pl.lot_id
+      LEFT JOIN parks_in pi
+        ON  pi.registration_number = b.registration_number
+        AND pi.slot_id             = b.slot_id
+        AND pi.in_time >= b.expected_start_time - INTERVAL 15 MINUTE
+        AND pi.in_time <= b.expected_start_time + INTERVAL 15 MINUTE
       WHERE b.user_id = ?
       ORDER BY b.booking_time DESC`,
       [user_id]
