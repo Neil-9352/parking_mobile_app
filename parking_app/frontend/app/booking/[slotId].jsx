@@ -39,26 +39,6 @@ const calculateExpectedCharge = ({ startTime, endTime, firstHourCharge, restHour
   return Number(firstHourCharge) + (extraHours * Number(restHourCharge));
 };
 
-<<<<<<< HEAD:parking_app/frontend/app/booking/[slotId].jsx
-export default function BookingScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-
-  const slotId = parseInt(params.slotId, 10);
-  const slot_no = parseInt(params.slot_no, 10);
-  const lot_id = parseInt(params.lot_id, 10);
-  const lot_name = params.lot_name;
-  const start_time = params.start_time;
-  const end_time = params.end_time;
-
-  let fee_rules = [];
-  try {
-    fee_rules = params.fee_rules ? JSON.parse(params.fee_rules) : [];
-  } catch (e) {
-    fee_rules = [];
-  }
-
-=======
 const BookingScreen = ({ route, navigation }) => {
   const {
     slot_id,
@@ -69,7 +49,6 @@ const BookingScreen = ({ route, navigation }) => {
     end_time,
     fee_rules = [],
   } = route.params;
->>>>>>> 0a96b61afd5fa0caeec2f01d2bd431387745d40e:parking_app/frontend/screens/BookingScreen.js
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(false);
