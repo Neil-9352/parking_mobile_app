@@ -4,7 +4,7 @@
  * Times are passed from SlotSelectionScreen (already selected via date picker)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,

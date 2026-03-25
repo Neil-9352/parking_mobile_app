@@ -3,7 +3,6 @@
  * Reusable card for displaying a booking with cancel option
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Card, Button, Chip, Divider } from 'react-native-paper';
 

@@ -3,7 +3,7 @@
  * Main hub showing quick actions: My Bookings, Parking Lots, Vehicles, Receipts
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,

@@ -5,7 +5,7 @@
  * Fetches lots with date-aware availability and displays them.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,

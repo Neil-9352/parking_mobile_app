@@ -3,7 +3,7 @@
  * Displays all user bookings with status, cancel option
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,

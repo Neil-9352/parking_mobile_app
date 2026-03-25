@@ -3,7 +3,7 @@
  * Displays parking receipts (from parks_in table) with download option
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,

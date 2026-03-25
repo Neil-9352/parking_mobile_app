@@ -3,7 +3,7 @@
  * User registration with name, username, password, and phone
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,

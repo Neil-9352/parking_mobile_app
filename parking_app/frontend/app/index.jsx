@@ -3,7 +3,7 @@
  * User login with username and password
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,

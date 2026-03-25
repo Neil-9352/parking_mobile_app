@@ -11,7 +11,7 @@
  *   red   → unavailable (overlapping ACTIVE booking exists)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,

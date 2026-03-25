@@ -5,7 +5,7 @@
  * User picks start and end date/time, then taps "Find Available Lots".
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,

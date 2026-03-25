@@ -3,7 +3,7 @@
  * Add new vehicles and view existing registered vehicles
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
