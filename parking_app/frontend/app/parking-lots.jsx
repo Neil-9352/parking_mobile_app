@@ -1,7 +1,7 @@
 /**
  * Parking Lots Screen
  *
- * Receives start_time / end_time from DateSelectionScreen.
+ * Receives start_time / end_time from DateSelectionScreen via search params.
  * Fetches lots with date-aware availability and displays them.
  */
 
@@ -13,11 +13,13 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Text, ActivityIndicator, Surface, Chip } from 'react-native-paper';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { parkingAPI } from '../services/api';
 import ParkingCard from '../components/ParkingCard';
 
-const ParkingLotsScreen = ({ route, navigation }) => {
-  const { start_time, end_time, display_start, display_end } = route.params;
+export default function ParkingLotsScreen() {
+  const router = useRouter();
+  const { start_time, end_time, display_start, display_end } = useLocalSearchParams();
 
   const [lots, setLots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,12 +82,14 @@ const ParkingLotsScreen = ({ route, navigation }) => {
           <ParkingCard
             lot={item}
             onPress={() =>
-              navigation.navigate('SlotSelection', {
-                lot_id: item.lot_id,
-                lot_name: item.lot_name,
-                layout_image_path: item.layout_image_path || null,
-                start_time,
-                end_time,
+              router.push({
+                pathname: `/slot-selection/${item.lot_id}`,
+                params: {
+                  lot_name: item.lot_name,
+                  layout_image_path: item.layout_image_path || '',
+                  start_time,
+                  end_time,
+                },
               })
             }
           />
@@ -103,7 +107,7 @@ const ParkingLotsScreen = ({ route, navigation }) => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -154,5 +158,3 @@ const styles = StyleSheet.create({
     color: '#888',
   },
 });
-
-export default ParkingLotsScreen;

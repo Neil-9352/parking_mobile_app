@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Text, Button, Surface } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 
-const DateSelectionScreen = ({ navigation }) => {
+export default function DateSelectionScreen() {
+  const router = useRouter();
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
 
@@ -81,11 +83,14 @@ const DateSelectionScreen = ({ navigation }) => {
       return;
     }
 
-    navigation.navigate('ParkingLots', {
-      start_time: formatForAPI(startDate),
-      end_time: formatForAPI(endDate),
-      display_start: `${formatDate(startDate)}, ${formatTime(startDate)}`,
-      display_end: `${formatDate(endDate)}, ${formatTime(endDate)}`,
+    router.push({
+      pathname: '/parking-lots',
+      params: {
+        start_time: formatForAPI(startDate),
+        end_time: formatForAPI(endDate),
+        display_start: `${formatDate(startDate)}, ${formatTime(startDate)}`,
+        display_end: `${formatDate(endDate)}, ${formatTime(endDate)}`,
+      },
     });
   };
 
@@ -182,7 +187,7 @@ const DateSelectionScreen = ({ navigation }) => {
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -258,5 +263,3 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 });
-
-export default DateSelectionScreen;

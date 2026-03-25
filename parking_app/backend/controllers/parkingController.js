@@ -95,6 +95,23 @@ const getSlots = async (req, res) => {
       });
     }
 
+    // Fee rules for expected charge estimation in booking flow
+    const [feeRules] = await pool.query(
+      `SELECT current_fee.vehicle_type, current_fee.first_hour_charge, current_fee.rest_hour_charge
+       FROM fee current_fee
+       WHERE current_fee.lot_id = ?
+         AND current_fee.fee_id = (
+           SELECT latest_fee.fee_id
+           FROM fee latest_fee
+           WHERE latest_fee.lot_id = current_fee.lot_id
+             AND latest_fee.vehicle_type = current_fee.vehicle_type
+           ORDER BY latest_fee.created_at DESC, latest_fee.fee_id DESC
+           LIMIT 1
+         )
+       ORDER BY current_fee.vehicle_type`,
+      [lot_id]
+    );
+
     let slots;
 
     if (start_time && end_time) {
@@ -130,6 +147,7 @@ const getSlots = async (req, res) => {
       data: {
         lot: lot[0],
         slots,
+        fee_rules: feeRules,
       },
     });
   } catch (error) {

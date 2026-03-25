@@ -1,5 +1,5 @@
 /**
- * Login Screen
+ * Login Screen (Index Route)
  * User login with username and password
  */
 
@@ -19,16 +19,17 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { authAPI } from '../services/api';
 
-const LoginScreen = ({ navigation }) => {
+export default function LoginScreen() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [secureText, setSecureText] = useState(true);
 
   const handleLogin = async () => {
-    // Validate fields
     if (!username.trim() || !password.trim()) {
       Alert.alert('Error', 'Please enter both username and password');
       return;
@@ -39,15 +40,10 @@ const LoginScreen = ({ navigation }) => {
       const response = await authAPI.login({ username, password });
 
       if (response.data.success) {
-        // Store token and user data
         await AsyncStorage.setItem('token', response.data.data.token);
         await AsyncStorage.setItem('user', JSON.stringify(response.data.data.user));
 
-        // Navigate to Dashboard
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Dashboard' }],
-        });
+        router.replace('/dashboard');
       }
     } catch (error) {
       const message =
@@ -114,7 +110,7 @@ const LoginScreen = ({ navigation }) => {
 
           <Button
             mode="text"
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => router.push('/register')}
             style={styles.linkButton}
           >
             Don't have an account? Register
@@ -123,7 +119,7 @@ const LoginScreen = ({ navigation }) => {
       </View>
     </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -180,5 +176,3 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
-
-export default LoginScreen;

@@ -3,7 +3,7 @@
  * Displays all user bookings with status, cancel option
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,11 +12,11 @@ import {
   Alert,
 } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
+import { useFocusEffect } from 'expo-router';
 import { bookingAPI } from '../services/api';
 import BookingCard from '../components/BookingCard';
-import { useFocusEffect } from '@react-navigation/native';
 
-const MyBookingsScreen = ({ navigation }) => {
+export default function MyBookingsScreen() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,7 +32,10 @@ const MyBookingsScreen = ({ navigation }) => {
     try {
       const response = await bookingAPI.getMyBookings();
       if (response.data.success) {
-        setBookings(response.data.data);
+        const uniqueBookings = Array.from(
+          new Map(response.data.data.map((booking) => [booking.booking_id, booking])).values()
+        );
+        setBookings(uniqueBookings);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -44,7 +47,7 @@ const MyBookingsScreen = ({ navigation }) => {
   const handleCancelBooking = async (bookingId) => {
     Alert.alert(
       'Cancel Booking',
-      'Are you sure you want to cancel this booking? You will receive a full refund of ₹500.',
+      'Are you sure you want to cancel this booking? Refund depends on time left before expected start (100%, 80%, 60%, 40%, or 0%).',
       [
         { text: 'No', style: 'cancel' },
         {
@@ -54,7 +57,14 @@ const MyBookingsScreen = ({ navigation }) => {
             try {
               const response = await bookingAPI.cancelBooking(bookingId);
               if (response.data.success) {
-                Alert.alert('Cancelled', 'Booking cancelled. Refund of ₹500 processed.');
+                const refundPercentage = Number(response.data?.data?.refund_percentage ?? 0);
+                const refundAmount = Number(response.data?.data?.refund_amount ?? 0).toFixed(2);
+                const cancellationCharge = Number(response.data?.data?.cancellation_charge ?? 0).toFixed(2);
+
+                Alert.alert(
+                  'Cancelled',
+                  `Booking cancelled.\nRefund: ${refundPercentage}% (₹${refundAmount})\nCancellation charge: ₹${cancellationCharge}`
+                );
                 fetchBookings(); // Refresh list
               }
             } catch (error) {
@@ -110,7 +120,7 @@ const MyBookingsScreen = ({ navigation }) => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -146,5 +156,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
-export default MyBookingsScreen;

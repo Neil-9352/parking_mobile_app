@@ -20,9 +20,11 @@ import {
   Badge,
 } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { bookingAPI, vehicleAPI } from '../services/api';
 
-const DashboardScreen = ({ navigation }) => {
+export default function DashboardScreen() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
     activeBookings: 0,
@@ -81,10 +83,7 @@ const DashboardScreen = ({ navigation }) => {
         onPress: async () => {
           await AsyncStorage.removeItem('token');
           await AsyncStorage.removeItem('user');
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
+          router.replace('/');
         },
       },
     ]);
@@ -126,7 +125,7 @@ const DashboardScreen = ({ navigation }) => {
 
       <Card
         style={styles.actionCard}
-        onPress={() => navigation.navigate('DateSelection')}
+        onPress={() => router.push('/date-selection')}
       >
         <Card.Content style={styles.actionContent}>
           <Text style={styles.actionEmoji}>🅿️</Text>
@@ -141,7 +140,7 @@ const DashboardScreen = ({ navigation }) => {
 
       <Card
         style={styles.actionCard}
-        onPress={() => navigation.navigate('MyBookings')}
+        onPress={() => router.push('/my-bookings')}
       >
         <Card.Content style={styles.actionContent}>
           <Text style={styles.actionEmoji}>📋</Text>
@@ -159,7 +158,7 @@ const DashboardScreen = ({ navigation }) => {
 
       <Card
         style={styles.actionCard}
-        onPress={() => navigation.navigate('Vehicles')}
+        onPress={() => router.push('/vehicles')}
       >
         <Card.Content style={styles.actionContent}>
           <Text style={styles.actionEmoji}>🚘</Text>
@@ -174,7 +173,7 @@ const DashboardScreen = ({ navigation }) => {
 
       <Card
         style={styles.actionCard}
-        onPress={() => navigation.navigate('Receipts')}
+        onPress={() => router.push('/receipts')}
       >
         <Card.Content style={styles.actionContent}>
           <Text style={styles.actionEmoji}>🧾</Text>
@@ -201,7 +200,7 @@ const DashboardScreen = ({ navigation }) => {
       <View style={styles.bottomSpacer} />
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -297,5 +296,3 @@ const styles = StyleSheet.create({
     height: 30,
   },
 });
-
-export default DashboardScreen;

@@ -8,10 +8,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL for the backend API
 // Change this to your backend server address
-const API_BASE_URL = 'http://172.16.1.93:5000/api'; // Your machine's LAN IP
+// const API_BASE_URL = 'http://172.16.1.93:5000/api'; // Your machine's LAN IP
 // const API_BASE_URL = 'http://10.232.117.50:5000/api'; // Your machine's LAN IP
+// const API_BASE_URL = 'http://10.186.189.229:5000/api'; // Your machine's LAN IP
+const API_BASE_URL = 'http://192.168.1.30:5000/api'; // Your machine's LAN IP
+// const API_BASE_URL = 'http://10.78.240.56:5000/api'; // Your machine's LAN IP
 // const API_BASE_URL = 'http://10.0.2.2:5000/api'; // Android emulator
 // const API_BASE_URL = 'http://localhost:5000/api'; // iOS simulator
+
+// Derived host — used for static file URLs (layout images, etc.)
+// This strips the /api suffix so it's not duplicated in static file paths
+export const API_HOST = API_BASE_URL.replace(/\/api$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
