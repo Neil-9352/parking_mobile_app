@@ -26,9 +26,20 @@ import { Text, Surface, Button, ActivityIndicator, IconButton } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { parkingAPI, API_HOST } from '../../services/api';
 
+<<<<<<< HEAD:parking_app/frontend/app/slot-selection/[lotId].jsx
 export default function SlotSelectionScreen() {
   const router = useRouter();
   const { lotId, lot_name, layout_image_path, start_time, end_time } = useLocalSearchParams();
+=======
+// Build image URL from the backend base
+// const API_HOST = 'http://172.16.1.93:5000'; // Must match your backend address
+const API_HOST = 'http://10.186.189.229:5000'; // Must match your backend address
+// const API_HOST = 'http://10.78.240.56:5000'; // Must match your backend address
+// const API_HOST = 'http://10.232.117.50:5000'; // Must match your backend address
+
+const SlotSelectionScreen = ({ route, navigation }) => {
+  const { lot_id, lot_name, layout_image_path, start_time, end_time } = route.params;
+>>>>>>> 0a96b61afd5fa0caeec2f01d2bd431387745d40e:parking_app/frontend/screens/SlotSelectionScreen.js
 
   const [slots, setSlots] = useState([]);
   const [feeRules, setFeeRules] = useState([]);
@@ -63,6 +74,7 @@ export default function SlotSelectionScreen() {
       return;
     }
 
+<<<<<<< HEAD:parking_app/frontend/app/slot-selection/[lotId].jsx
     router.push({
       pathname: `/booking/${slot.slot_id}`,
       params: {
@@ -73,6 +85,16 @@ export default function SlotSelectionScreen() {
         end_time,
         fee_rules: JSON.stringify(feeRules),
       },
+=======
+    navigation.navigate('Booking', {
+      slot_id: slot.slot_id,
+      slot_no: slot.slot_no,
+      lot_id,
+      lot_name,
+      start_time,
+      end_time,
+      fee_rules: feeRules,
+>>>>>>> 0a96b61afd5fa0caeec2f01d2bd431387745d40e:parking_app/frontend/screens/SlotSelectionScreen.js
     });
   };
 

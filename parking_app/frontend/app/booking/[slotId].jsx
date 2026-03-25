@@ -39,6 +39,7 @@ const calculateExpectedCharge = ({ startTime, endTime, firstHourCharge, restHour
   return Number(firstHourCharge) + (extraHours * Number(restHourCharge));
 };
 
+<<<<<<< HEAD:parking_app/frontend/app/booking/[slotId].jsx
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -57,6 +58,18 @@ export default function BookingScreen() {
     fee_rules = [];
   }
 
+=======
+const BookingScreen = ({ route, navigation }) => {
+  const {
+    slot_id,
+    slot_no,
+    lot_id,
+    lot_name,
+    start_time,
+    end_time,
+    fee_rules = [],
+  } = route.params;
+>>>>>>> 0a96b61afd5fa0caeec2f01d2bd431387745d40e:parking_app/frontend/screens/BookingScreen.js
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(false);

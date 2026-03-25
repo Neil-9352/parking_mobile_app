@@ -24,21 +24,25 @@ MariaDB [parking_lot_final]> desc admin;
 3 rows in set (0.008 sec)
 
 MariaDB [parking_lot_final]> desc books;
-+---------------------+--------------------------------------------------+------+-----+---------------------+----------------+
-| Field               | Type                                             | Null | Key | Default             | Extra          |
-+---------------------+--------------------------------------------------+------+-----+---------------------+----------------+
-| booking_id          | int(11)                                          | NO   | PRI | NULL                | auto_increment |
-| user_id             | int(11)                                          | NO   | MUL | NULL                |                |
-| registration_number | varchar(20)                                      | NO   | MUL | NULL                |                |
-| slot_id             | int(11)                                          | NO   | MUL | NULL                |                |
-| booking_time        | timestamp                                        | YES  |     | current_timestamp() |                |
-| expected_start_time | datetime                                         | NO   |     | NULL                |                |
-| expected_end_time   | datetime                                         | NO   |     | NULL                |                |
-| booking_amount      | decimal(10,2)                                    | NO   |     | NULL                |                |
-| booking_status      | enum('ACTIVE','CANCELLED','COMPLETED','NO_SHOW') | YES  |     | ACTIVE              |                |
-| refund_status       | enum('PENDING','REFUNDED','NOT_APPLICABLE')      | YES  |     | PENDING             |                |
-+---------------------+--------------------------------------------------+------+-----+---------------------+----------------+
-10 rows in set (0.001 sec)
++--------------------------+--------------------------------------------------+------+-----+---------------------+----------------+
+| Field                    | Type                                             | Null | Key | Default             | Extra          |
++--------------------------+--------------------------------------------------+------+-----+---------------------+----------------+
+| booking_id               | int(11)                                          | NO   | PRI | NULL                | auto_increment |
+| user_id                  | int(11)                                          | NO   | MUL | NULL                |                |
+| registration_number      | varchar(20)                                      | NO   | MUL | NULL                |                |
+| slot_id                  | int(11)                                          | NO   | MUL | NULL                |                |
+| booking_time             | timestamp                                        | YES  |     | current_timestamp() |                |
+| expected_start_time      | datetime                                         | NO   |     | NULL                |                |
+| expected_end_time        | datetime                                         | NO   |     | NULL                |                |
+| booking_amount           | decimal(10,2)                                    | NO   |     | NULL                |                |
+| expected_parking_charges | decimal(10,2)                                    | YES  |     | NULL                |                |
+| booking_status           | enum('ACTIVE','CANCELLED','COMPLETED','NO_SHOW') | YES  |     | ACTIVE              |                |
+| cancellation_time        | datetime                                         | YES  |     | NULL                |                |
+| refund_percentage        | decimal(5,2)                                     | YES  |     | NULL                |                |
+| refund_amount            | decimal(10,2)                                    | YES  |     | NULL                |                |
+| refund_status            | enum('PENDING','REFUNDED','NOT_APPLICABLE')      | YES  |     | PENDING             |                |
++--------------------------+--------------------------------------------------+------+-----+---------------------+----------------+
+14 rows in set (0.001 sec)
 
 MariaDB [parking_lot_final]> desc fee;
 +-------------------+-------------------------------+------+-----+---------------------+----------------+
@@ -89,6 +93,18 @@ MariaDB [parking_lot_final]> desc parks_in;
 | receipt_path        | varchar(255)  | YES  |     | NULL    |                |
 +---------------------+---------------+------+-----+---------+----------------+
 9 rows in set (0.001 sec)
+
+MariaDB [parking_lot_final]> desc user;
++----------+--------------+------+-----+---------+----------------+
+| Field    | Type         | Null | Key | Default | Extra          |
++----------+--------------+------+-----+---------+----------------+
+| user_id  | int(11)      | NO   | PRI | NULL    | auto_increment |
+| username | varchar(100) | NO   | UNI | NULL    |                |
+| password | varchar(255) | NO   |     | NULL    |                |
+| name     | varchar(100) | NO   |     | NULL    |                |
+| phone    | varchar(15)  | NO   |     | NULL    |                |
++----------+--------------+------+-----+---------+----------------+
+5 rows in set (0.001 sec)
 
 MariaDB [parking_lot_final]> desc vehicle;
 +---------------------+-------------------------------+------+-----+---------+-------+

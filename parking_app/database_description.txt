@@ -36,9 +36,12 @@ MariaDB [parking_lot_final]> desc books;
 | expected_end_time   | datetime                                         | NO   |     | NULL                |                |
 | booking_amount      | decimal(10,2)                                    | NO   |     | NULL                |                |
 | booking_status      | enum('ACTIVE','CANCELLED','COMPLETED','NO_SHOW') | YES  |     | ACTIVE              |                |
+| cancellation_time   | datetime                                         | YES  |     | NULL                |                |
+| refund_percentage   | decimal(5,2)                                     | YES  |     | NULL                |                |
+| refund_amount       | decimal(10,2)                                    | YES  |     | NULL                |                |
 | refund_status       | enum('PENDING','REFUNDED','NOT_APPLICABLE')      | YES  |     | PENDING             |                |
 +---------------------+--------------------------------------------------+------+-----+---------------------+----------------+
-10 rows in set (0.001 sec)
+13 rows in set (0.001 sec)
 
 MariaDB [parking_lot_final]> desc fee;
 +-------------------+-------------------------------+------+-----+---------------------+----------------+
