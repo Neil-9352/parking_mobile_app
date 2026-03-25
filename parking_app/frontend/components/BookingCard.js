@@ -35,6 +35,16 @@ const BookingCard = ({ booking, onCancel }) => {
     });
   };
 
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return `₹${Number(value).toFixed(2)}`;
+  };
+
+  const formatPercentage = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return `${Number(value).toFixed(0)}%`;
+  };
+
   return (
     <Card style={styles.card}>
       <Card.Content>
@@ -79,7 +89,15 @@ const BookingCard = ({ booking, onCancel }) => {
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Deposit</Text>
-          <Text style={styles.value}>₹{booking.booking_amount}</Text>
+          <Text style={styles.value}>{formatCurrency(booking.booking_amount)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Expected Parking Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.expected_parking_charge)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual Parking Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.actual_parking_charge)}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Refund</Text>
@@ -89,6 +107,22 @@ const BookingCard = ({ booking, onCancel }) => {
           >
             {booking.refund_status}
           </Chip>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Refund %</Text>
+          <Text style={styles.value}>{formatPercentage(booking.refund_percentage)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Refund Amount</Text>
+          <Text style={styles.value}>{formatCurrency(booking.refund_amount)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Cancellation Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.cancellation_charge)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Cancelled At</Text>
+          <Text style={styles.value}>{formatDate(booking.cancellation_time)}</Text>
         </View>
 
         {/* Cancel Button (only for ACTIVE bookings) */}

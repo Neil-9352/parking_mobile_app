@@ -2,4 +2,5 @@ parking_app/backend/.env
 parking_app/backend/node_modules/
 
 parking_app/frontend/node_modules/
-parking_app/frontend/build/
+parking_app/frontend/android/
+parking_app/frontend/.expo/

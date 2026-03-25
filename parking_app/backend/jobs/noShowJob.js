@@ -4,7 +4,7 @@
  * Runs every minute and marks ACTIVE bookings as NO_SHOW when:
  *  - The booking's expected_start_time + 15 minutes has passed, AND
  *  - No parks_in arrival record exists for that vehicle on that slot
- *    within a window of [expected_start_time - 30min, expected_start_time + 15min]
+ *    within a window of [expected_start_time - 15min, expected_start_time + 15min]
  *
  * NO_SHOW bookings receive refund_status = NOT_APPLICABLE (deposit is forfeited).
  */
@@ -37,7 +37,7 @@ const markNoShows = async () => {
     );
 
     if (candidates.length === 0) {
-      connection.release();
+      await connection.rollback();
       return;
     }
 
@@ -47,7 +47,10 @@ const markNoShows = async () => {
     await connection.query(
       `UPDATE books
        SET booking_status = 'NO_SHOW',
-           refund_status  = 'NOT_APPLICABLE'
+           refund_status  = 'NOT_APPLICABLE',
+           cancellation_time = NOW(),
+           refund_percentage = 0.00,
+           refund_amount = 0.00
        WHERE booking_id IN (?)`,
       [bookingIds]
     );

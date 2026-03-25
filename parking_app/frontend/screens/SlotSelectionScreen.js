@@ -26,13 +26,16 @@ import { Text, Surface, Button, ActivityIndicator, IconButton } from 'react-nati
 import { parkingAPI } from '../services/api';
 
 // Build image URL from the backend base
-const API_HOST = 'http://172.16.1.93:5000'; // Must match your backend address
+// const API_HOST = 'http://172.16.1.93:5000'; // Must match your backend address
+const API_HOST = 'http://10.186.189.229:5000'; // Must match your backend address
+// const API_HOST = 'http://10.78.240.56:5000'; // Must match your backend address
 // const API_HOST = 'http://10.232.117.50:5000'; // Must match your backend address
 
 const SlotSelectionScreen = ({ route, navigation }) => {
   const { lot_id, lot_name, layout_image_path, start_time, end_time } = route.params;
 
   const [slots, setSlots] = useState([]);
+  const [feeRules, setFeeRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [layoutVisible, setLayoutVisible] = useState(false);
 
@@ -45,6 +48,7 @@ const SlotSelectionScreen = ({ route, navigation }) => {
       const response = await parkingAPI.getSlots(lot_id, start_time, end_time);
       if (response.data.success) {
         setSlots(response.data.data.slots);
+        setFeeRules(response.data.data.fee_rules || []);
       }
     } catch (error) {
       console.error('Error fetching slots:', error);
@@ -70,6 +74,7 @@ const SlotSelectionScreen = ({ route, navigation }) => {
       lot_name,
       start_time,
       end_time,
+      fee_rules: feeRules,
     });
   };
 
