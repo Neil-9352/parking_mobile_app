@@ -63,7 +63,7 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.emoji}>🚗</Text>
-          <Text style={styles.title}>ParkEasy</Text>
+          <Text style={styles.title}>iParking</Text>
           <Text style={styles.subtitle}>Smart Parking Management</Text>
         </View>
 

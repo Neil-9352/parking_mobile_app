@@ -5,6 +5,8 @@
  * time-based overlap checks (from the backend), NOT parking_slot.status.
  *
  * Has a "View Parking Lot Layout" button that shows the lot layout image.
+ * Has a "View Refund Policy" button at the bottom showing the cancellation
+ * refund tiers in a formatted table.
  *
  * Color coding:
  *   green → available (no overlapping booking)
@@ -20,9 +22,10 @@ import {
   Alert,
   Modal,
   Image,
+  ScrollView,
   Dimensions,
 } from 'react-native';
-import { Text, Surface, Button, ActivityIndicator, IconButton } from 'react-native-paper';
+import { Text, Surface, Button, ActivityIndicator, IconButton, Divider } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { parkingAPI, API_HOST } from '../../services/api';
 
@@ -34,6 +37,7 @@ export default function SlotSelectionScreen() {
   const [feeRules, setFeeRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [layoutVisible, setLayoutVisible] = useState(false);
+  const [refundPolicyVisible, setRefundPolicyVisible] = useState(false);
 
   useEffect(() => {
     fetchSlots();
@@ -155,6 +159,90 @@ export default function SlotSelectionScreen() {
         </View>
       </Modal>
 
+      {/* Refund Policy Modal */}
+      <Modal
+        visible={refundPolicyVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRefundPolicyVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>💸 Cancellation Refund Policy</Text>
+              <IconButton
+                icon="close"
+                size={24}
+                onPress={() => setRefundPolicyVisible(false)}
+              />
+            </View>
+
+            <ScrollView style={styles.refundScroll}>
+              {/* Intro */}
+              <Text style={styles.refundIntro}>
+                A deposit of <Text style={styles.refundHighlight}>₹500</Text> is collected at the time of booking.
+                The refund amount depends on how far in advance you cancel:
+              </Text>
+
+              {/* Table Header */}
+              <View style={[styles.tableRow, styles.tableHead]}>
+                <Text style={[styles.tableCell, styles.tableHeadText, { flex: 2 }]}>Time Before Start</Text>
+                <Text style={[styles.tableCell, styles.tableHeadText, { flex: 1, textAlign: 'center' }]}>Refund</Text>
+                <Text style={[styles.tableCell, styles.tableHeadText, { flex: 1.4, textAlign: 'right' }]}>Amount</Text>
+              </View>
+              <Divider />
+
+              {/* Row 1 */}
+              <View style={[styles.tableRow, styles.rowGreen]}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>24 hours or more</Text>
+                <Text style={[styles.tableCell, styles.refundGreen, { flex: 1, textAlign: 'center' }]}>100%</Text>
+                <Text style={[styles.tableCell, styles.refundGreen, { flex: 1.4, textAlign: 'right' }]}>₹500</Text>
+              </View>
+              <Divider />
+
+              {/* Row 2 */}
+              <View style={[styles.tableRow, styles.rowLightGreen]}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>12 – 24 hours</Text>
+                <Text style={[styles.tableCell, styles.refundLightGreen, { flex: 1, textAlign: 'center' }]}>80%</Text>
+                <Text style={[styles.tableCell, styles.refundLightGreen, { flex: 1.4, textAlign: 'right' }]}>₹400</Text>
+              </View>
+              <Divider />
+
+              {/* Row 3 */}
+              <View style={[styles.tableRow, styles.rowOrange]}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>8 – 12 hours</Text>
+                <Text style={[styles.tableCell, styles.refundOrange, { flex: 1, textAlign: 'center' }]}>60%</Text>
+                <Text style={[styles.tableCell, styles.refundOrange, { flex: 1.4, textAlign: 'right' }]}>₹300</Text>
+              </View>
+              <Divider />
+
+              {/* Row 4 */}
+              <View style={[styles.tableRow, styles.rowDarkOrange]}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>4 – 8 hours</Text>
+                <Text style={[styles.tableCell, styles.refundDarkOrange, { flex: 1, textAlign: 'center' }]}>40%</Text>
+                <Text style={[styles.tableCell, styles.refundDarkOrange, { flex: 1.4, textAlign: 'right' }]}>₹200</Text>
+              </View>
+              <Divider />
+
+              {/* Row 5 */}
+              <View style={[styles.tableRow, styles.rowRed]}>
+                <Text style={[styles.tableCell, { flex: 2 }]}>Less than 4 hours</Text>
+                <Text style={[styles.tableCell, styles.refundRed, { flex: 1, textAlign: 'center' }]}>0%</Text>
+                <Text style={[styles.tableCell, styles.refundRed, { flex: 1.4, textAlign: 'right' }]}>₹0</Text>
+              </View>
+
+              {/* Note */}
+              <View style={styles.refundNote}>
+                <Text style={styles.refundNoteText}>
+                  ℹ️  The deposit is fully refunded when your vehicle exits the lot after a completed booking.
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
@@ -183,7 +271,7 @@ export default function SlotSelectionScreen() {
           >
             <Text style={styles.slotNumber}>{item.slot_no}</Text>
             <Text style={styles.slotStatus}>
-              {item.available ? '🚗' : '🚫'}
+              {item.available ? '☑️' : '🚫'}
             </Text>
           </TouchableOpacity>
         )}
@@ -192,6 +280,18 @@ export default function SlotSelectionScreen() {
           <View style={styles.centered}>
             <Text style={styles.emptyText}>No slots found for this lot</Text>
           </View>
+        }
+        ListFooterComponent={
+          <Button
+            mode="outlined"
+            icon="cash-refund"
+            onPress={() => setRefundPolicyVisible(true)}
+            style={styles.refundPolicyButton}
+            contentStyle={styles.refundPolicyButtonContent}
+            textColor="#e65100"
+          >
+            View Refund Policy
+          </Button>
         }
       />
     </View>
@@ -317,5 +417,77 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#888',
+  },
+
+  // Refund Policy Button
+  refundPolicyButton: {
+    marginHorizontal: 6,
+    marginTop: 4,
+    marginBottom: 20,
+    borderRadius: 8,
+    borderColor: '#e65100',
+  },
+  refundPolicyButtonContent: {
+    paddingVertical: 4,
+  },
+
+  // Refund Policy Modal
+  refundScroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  refundIntro: {
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 20,
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  refundHighlight: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  tableHead: {
+    backgroundColor: '#37474f',
+    borderRadius: 6,
+    marginBottom: 2,
+  },
+  tableHeadText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  tableCell: {
+    fontSize: 13,
+    color: '#333',
+    paddingHorizontal: 4,
+  },
+  rowGreen:      { backgroundColor: '#f1f8e9' },
+  rowLightGreen: { backgroundColor: '#f9fbe7' },
+  rowOrange:     { backgroundColor: '#fff8e1' },
+  rowDarkOrange: { backgroundColor: '#fff3e0' },
+  rowRed:        { backgroundColor: '#fce4ec' },
+  refundGreen:      { color: '#2e7d32', fontWeight: 'bold' },
+  refundLightGreen: { color: '#558b2f', fontWeight: 'bold' },
+  refundOrange:     { color: '#f57f17', fontWeight: 'bold' },
+  refundDarkOrange: { color: '#e65100', fontWeight: 'bold' },
+  refundRed:        { color: '#c62828', fontWeight: 'bold' },
+  refundNote: {
+    marginTop: 14,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+  },
+  refundNoteText: {
+    fontSize: 12,
+    color: '#1565c0',
+    lineHeight: 18,
   },
 });

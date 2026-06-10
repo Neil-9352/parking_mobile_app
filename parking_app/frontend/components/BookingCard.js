@@ -44,6 +44,15 @@ const BookingCard = ({ booking, onCancel }) => {
     return `${Number(value).toFixed(0)}%`;
   };
 
+  // Converts SNAKE_CASE enum values to Title Case (e.g. NOT_APPLICABLE → Not Applicable)
+  const formatStatus = (value) => {
+    if (!value) return 'N/A';
+    return value
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <Card style={styles.card}>
       <Card.Content>
@@ -59,7 +68,7 @@ const BookingCard = ({ booking, onCancel }) => {
             style={[styles.statusChip, { backgroundColor: statusColor.bg }]}
             textStyle={[styles.statusText, { color: statusColor.text }]}
           >
-            {booking.booking_status}
+            {formatStatus(booking.booking_status)}
           </Chip>
         </View>
 
@@ -104,7 +113,7 @@ const BookingCard = ({ booking, onCancel }) => {
             style={[styles.refundChip, { backgroundColor: refundColor.bg }]}
             textStyle={[styles.refundText, { color: refundColor.text }]}
           >
-            {booking.refund_status}
+            {formatStatus(booking.refund_status)}
           </Chip>
         </View>
         <View style={styles.detailRow}>
@@ -163,11 +172,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusChip: {
-    height: 28,
+    alignSelf: 'center',
+    paddingHorizontal: 4,
   },
   statusText: {
     fontSize: 11,
     fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   divider: {
     marginVertical: 10,
@@ -188,11 +200,14 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   refundChip: {
-    height: 26,
+    alignSelf: 'center',
+    paddingHorizontal: 4,
   },
   refundText: {
     fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   cancelButton: {
     marginTop: 12,

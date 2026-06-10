@@ -70,7 +70,7 @@ export default function RegisterScreen() {
           <View style={styles.header}>
             <Text style={styles.emoji}>🚗</Text>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join ParkEasy today</Text>
+            <Text style={styles.subtitle}>Join iParking today</Text>
           </View>
 
           {/* Register Form */}

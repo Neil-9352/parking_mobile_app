@@ -80,14 +80,14 @@ const runSlotBookingLockJob = async () => {
     await connection.commit();
 
     if (lockResult.affectedRows > 0) {
-      console.log(`[SlotBookingLockJob] 🔒 Locked ${lockResult.affectedRows} slot(s) — entering 3-hour pre-booking window.`);
+      console.log(`[SlotBookingLockJob] Locked ${lockResult.affectedRows} slot(s) — entering 3-hour pre-booking window.`);
     }
     if (releaseResult.affectedRows > 0) {
-      console.log(`[SlotBookingLockJob] 🔓 Released ${releaseResult.affectedRows} slot(s) — no qualifying active booking.`);
+      console.log(`[SlotBookingLockJob] Released ${releaseResult.affectedRows} slot(s) — no qualifying active booking.`);
     }
   } catch (error) {
     await connection.rollback();
-    console.error('[SlotBookingLockJob] ❌ Error during slot status sync:', error);
+    console.error('[SlotBookingLockJob] Error during slot status sync:', error);
   } finally {
     connection.release();
   }
