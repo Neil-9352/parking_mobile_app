@@ -3,7 +3,7 @@
  * User registration with name, username, password, and phone
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,9 +18,11 @@ import {
   Button,
   Surface,
 } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { authAPI } from '../services/api';
 
-const RegisterScreen = ({ navigation }) => {
+export default function RegisterScreen() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +31,6 @@ const RegisterScreen = ({ navigation }) => {
   const [secureText, setSecureText] = useState(true);
 
   const handleRegister = async () => {
-    // Validate fields
     if (!name.trim() || !username.trim() || !password.trim() || !phone.trim()) {
       Alert.alert('Error', 'All fields are required');
       return;
@@ -46,7 +47,7 @@ const RegisterScreen = ({ navigation }) => {
 
       if (response.data.success) {
         Alert.alert('Success', 'Account created successfully! Please login.', [
-          { text: 'OK', onPress: () => navigation.navigate('Login') },
+          { text: 'OK', onPress: () => router.replace('/') },
         ]);
       }
     } catch (error) {
@@ -69,7 +70,7 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.header}>
             <Text style={styles.emoji}>🚗</Text>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join ParkEasy today</Text>
+            <Text style={styles.subtitle}>Join iParking today</Text>
           </View>
 
           {/* Register Form */}
@@ -132,7 +133,7 @@ const RegisterScreen = ({ navigation }) => {
 
             <Button
               mode="text"
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => router.replace('/')}
               style={styles.linkButton}
             >
               Already have an account? Login
@@ -142,7 +143,7 @@ const RegisterScreen = ({ navigation }) => {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -196,5 +197,3 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
-
-export default RegisterScreen;

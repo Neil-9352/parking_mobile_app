@@ -3,7 +3,7 @@
  * Displays parking receipts (from parks_in table) with download option
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -23,7 +23,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { receiptAPI } from '../services/api';
 
-const ReceiptsScreen = ({ navigation }) => {
+export default function ReceiptsScreen() {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,17 +90,12 @@ const ReceiptsScreen = ({ navigation }) => {
         <View style={styles.receiptHeader}>
           <Text style={styles.vehicleNo}>{item.registration_number}</Text>
           {item.fee && (
-            <Chip
-              style={styles.feeChip}
-              textStyle={styles.feeChipText}
-            >
+            <Chip style={styles.feeChip} textStyle={styles.feeChipText}>
               ₹{item.fee}
             </Chip>
           )}
         </View>
-
         <Divider style={styles.divider} />
-
         <View style={styles.receiptRow}>
           <Text style={styles.label}>Lot</Text>
           <Text style={styles.value}>{item.lot_name}</Text>
@@ -117,7 +112,6 @@ const ReceiptsScreen = ({ navigation }) => {
           <Text style={styles.label}>Exit Time</Text>
           <Text style={styles.value}>{formatDateTime(item.out_time)}</Text>
         </View>
-
         {item.receipt_path && (
           <Button
             mode="outlined"
@@ -154,84 +148,24 @@ const ReceiptsScreen = ({ navigation }) => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 60,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-  },
-  listContent: {
-    padding: 16,
-  },
-  receiptCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-  },
-  receiptHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  vehicleNo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  feeChip: {
-    backgroundColor: '#e8f5e9',
-  },
-  feeChipText: {
-    color: '#4caf50',
-    fontWeight: 'bold',
-  },
-  divider: {
-    marginVertical: 10,
-  },
-  receiptRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  label: {
-    fontSize: 13,
-    color: '#888',
-  },
-  value: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-  },
-  downloadBtn: {
-    marginTop: 12,
-    borderColor: '#1a73e8',
-  },
-  emptyEmoji: {
-    fontSize: 60,
-    marginBottom: 10,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#888',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#aaa',
-    marginTop: 4,
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginTop: 60 },
+  loadingText: { marginTop: 10, color: '#666' },
+  listContent: { padding: 16 },
+  receiptCard: { marginBottom: 12, borderRadius: 12, backgroundColor: '#fff' },
+  receiptHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  vehicleNo: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  feeChip: { backgroundColor: '#e8f5e9' },
+  feeChipText: { color: '#4caf50', fontWeight: 'bold' },
+  divider: { marginVertical: 10 },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  label: { fontSize: 13, color: '#888' },
+  value: { fontSize: 13, fontWeight: '600', color: '#333' },
+  downloadBtn: { marginTop: 12, borderColor: '#1a73e8' },
+  emptyEmoji: { fontSize: 60, marginBottom: 10 },
+  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#888' },
+  emptySubtext: { fontSize: 14, color: '#aaa', marginTop: 4 },
 });
-
-export default ReceiptsScreen;

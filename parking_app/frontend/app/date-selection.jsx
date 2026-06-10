@@ -5,7 +5,7 @@
  * User picks start and end date/time, then taps "Find Available Lots".
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { Text, Button, Surface } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 
-const DateSelectionScreen = ({ navigation }) => {
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
+export default function DateSelectionScreen() {
+  const router = useRouter();
+  const [startDate, setStartDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
+  const [endDate, setEndDate] = useState(new Date(Date.now() + 3 * 60 * 60 * 1000));
 
   const [showPicker, setShowPicker] = useState(false);
   const [pickerMode, setPickerMode] = useState('date');
@@ -40,20 +42,44 @@ const DateSelectionScreen = ({ navigation }) => {
       if (pickerMode === 'date') {
         updated.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         setStartDate(updated);
+        // Adjust end date if it is now behind or equal to the new start
+        setEndDate((prevEnd) => {
+          if (prevEnd <= updated) {
+            return new Date(updated.getTime() + 2 * 60 * 60 * 1000);
+          }
+          return prevEnd;
+        });
         setTimeout(() => openPicker('start', 'time'), 300);
       } else {
         updated.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-        setStartDate(updated);
+        // Clamp: start must be at least 1 hour from now
+        const minStart = new Date(Date.now() + 60 * 60 * 1000);
+        const clampedStart = updated < minStart ? minStart : updated;
+        setStartDate(clampedStart);
+        // Preserve the existing gap; if end is now behind, shift it forward
+        setEndDate((prevEnd) => {
+          if (prevEnd <= clampedStart) {
+            // Keep the same gap the user had (min 1 hour)
+            const gapMs = Math.max(endDate - startDate, 60 * 60 * 1000);
+            return new Date(clampedStart.getTime() + gapMs);
+          }
+          return prevEnd;
+        });
       }
     } else {
+      const MIN_GAP_MS = 60 * 60 * 1000; // 1 hour
       const updated = new Date(endDate);
       if (pickerMode === 'date') {
         updated.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        setEndDate(updated);
+        // Clamp: end must be at least 1 hour after start
+        const minEnd = new Date(startDate.getTime() + MIN_GAP_MS);
+        setEndDate(updated < minEnd ? minEnd : updated);
         setTimeout(() => openPicker('end', 'time'), 300);
       } else {
         updated.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-        setEndDate(updated);
+        // Clamp: end must be at least 1 hour after start
+        const minEnd = new Date(startDate.getTime() + MIN_GAP_MS);
+        setEndDate(updated < minEnd ? minEnd : updated);
       }
     }
   };
@@ -76,16 +102,20 @@ const DateSelectionScreen = ({ navigation }) => {
   // ── Validation & navigation ─────────────────────────────────
 
   const handleFindParking = () => {
-    if (endDate <= startDate) {
-      Alert.alert('Invalid Duration', 'End time must be after start time.');
+    const diffMs = endDate - startDate;
+    if (diffMs < 60 * 60 * 1000) {
+      Alert.alert('Invalid Duration', 'Parking duration must be at least 1 hour.');
       return;
     }
 
-    navigation.navigate('ParkingLots', {
-      start_time: formatForAPI(startDate),
-      end_time: formatForAPI(endDate),
-      display_start: `${formatDate(startDate)}, ${formatTime(startDate)}`,
-      display_end: `${formatDate(endDate)}, ${formatTime(endDate)}`,
+    router.push({
+      pathname: '/parking-lots',
+      params: {
+        start_time: formatForAPI(startDate),
+        end_time: formatForAPI(endDate),
+        display_start: `${formatDate(startDate)}, ${formatTime(startDate)}`,
+        display_end: `${formatDate(endDate)}, ${formatTime(endDate)}`,
+      },
     });
   };
 
@@ -165,7 +195,7 @@ const DateSelectionScreen = ({ navigation }) => {
             is24Hour={false}
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={onDateChange}
-            minimumDate={pickerTarget === 'end' ? startDate : new Date()}
+            minimumDate={pickerTarget === 'end' ? startDate : new Date(Date.now() + 60 * 60 * 1000)}
           />
         )}
 
@@ -182,7 +212,7 @@ const DateSelectionScreen = ({ navigation }) => {
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -258,5 +288,3 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 });
-
-export default DateSelectionScreen;

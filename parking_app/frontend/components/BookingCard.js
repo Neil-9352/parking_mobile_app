@@ -3,7 +3,6 @@
  * Reusable card for displaying a booking with cancel option
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Card, Button, Chip, Divider } from 'react-native-paper';
 
@@ -35,6 +34,25 @@ const BookingCard = ({ booking, onCancel }) => {
     });
   };
 
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return `₹${Number(value).toFixed(2)}`;
+  };
+
+  const formatPercentage = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return `${Number(value).toFixed(0)}%`;
+  };
+
+  // Converts SNAKE_CASE enum values to Title Case (e.g. NOT_APPLICABLE → Not Applicable)
+  const formatStatus = (value) => {
+    if (!value) return 'N/A';
+    return value
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <Card style={styles.card}>
       <Card.Content>
@@ -50,7 +68,7 @@ const BookingCard = ({ booking, onCancel }) => {
             style={[styles.statusChip, { backgroundColor: statusColor.bg }]}
             textStyle={[styles.statusText, { color: statusColor.text }]}
           >
-            {booking.booking_status}
+            {formatStatus(booking.booking_status)}
           </Chip>
         </View>
 
@@ -62,16 +80,32 @@ const BookingCard = ({ booking, onCancel }) => {
           <Text style={styles.value}>{formatDate(booking.booking_time)}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.label}>Start</Text>
+          <Text style={styles.label}>Expected Start</Text>
           <Text style={styles.value}>{formatDate(booking.expected_start_time)}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.label}>End</Text>
+          <Text style={styles.label}>Expected End</Text>
           <Text style={styles.value}>{formatDate(booking.expected_end_time)}</Text>
         </View>
         <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual In</Text>
+          <Text style={styles.value}>{formatDate(booking.actual_in_time)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual Out</Text>
+          <Text style={styles.value}>{formatDate(booking.actual_out_time)}</Text>
+        </View>
+        <View style={styles.detailRow}>
           <Text style={styles.label}>Deposit</Text>
-          <Text style={styles.value}>₹{booking.booking_amount}</Text>
+          <Text style={styles.value}>{formatCurrency(booking.booking_amount)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Expected Parking Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.expected_parking_charge)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Actual Parking Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.actual_parking_charge)}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.label}>Refund</Text>
@@ -79,8 +113,24 @@ const BookingCard = ({ booking, onCancel }) => {
             style={[styles.refundChip, { backgroundColor: refundColor.bg }]}
             textStyle={[styles.refundText, { color: refundColor.text }]}
           >
-            {booking.refund_status}
+            {formatStatus(booking.refund_status)}
           </Chip>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Refund %</Text>
+          <Text style={styles.value}>{formatPercentage(booking.refund_percentage)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Refund Amount</Text>
+          <Text style={styles.value}>{formatCurrency(booking.refund_amount)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Cancellation Charge</Text>
+          <Text style={styles.value}>{formatCurrency(booking.cancellation_charge)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>Cancelled At</Text>
+          <Text style={styles.value}>{formatDate(booking.cancellation_time)}</Text>
         </View>
 
         {/* Cancel Button (only for ACTIVE bookings) */}
@@ -122,11 +172,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusChip: {
-    height: 28,
+    alignSelf: 'center',
+    paddingHorizontal: 4,
   },
   statusText: {
     fontSize: 11,
     fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   divider: {
     marginVertical: 10,
@@ -147,11 +200,14 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   refundChip: {
-    height: 26,
+    alignSelf: 'center',
+    paddingHorizontal: 4,
   },
   refundText: {
     fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   cancelButton: {
     marginTop: 12,

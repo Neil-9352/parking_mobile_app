@@ -1,10 +1,10 @@
 /**
- * Booking Screen
+ * Booking Screen — Dynamic Route [slotId]
  * Confirmation screen — shows selected slot + times, user picks vehicle, then confirms
  * Times are passed from SlotSelectionScreen (already selected via date picker)
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,12 +18,45 @@ import {
   RadioButton,
   Divider,
 } from 'react-native-paper';
-import { vehicleAPI, bookingAPI } from '../services/api';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { vehicleAPI, bookingAPI } from '../../services/api';
 
 const BOOKING_DEPOSIT = 500;
 
-const BookingScreen = ({ route, navigation }) => {
-  const { slot_id, slot_no, lot_id, lot_name, start_time, end_time } = route.params;
+const calculateExpectedCharge = ({ startTime, endTime, firstHourCharge, restHourCharge }) => {
+  const start = new Date(startTime.replace(' ', 'T'));
+  const end = new Date(endTime.replace(' ', 'T'));
+
+  const durationMinutes = Math.max(0, Math.ceil((end - start) / (1000 * 60)));
+
+  if (durationMinutes <= 60) {
+    return Number(firstHourCharge);
+  }
+
+  const extraMinutes = durationMinutes - 60;
+  const extraHours = Math.ceil(extraMinutes / 60);
+
+  return Number(firstHourCharge) + (extraHours * Number(restHourCharge));
+};
+
+export default function BookingScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+
+  const slotId = parseInt(params.slotId, 10);
+  const slot_no = parseInt(params.slot_no, 10);
+  const lot_id = parseInt(params.lot_id, 10);
+  const lot_name = params.lot_name;
+  const start_time = params.start_time;
+  const end_time = params.end_time;
+
+  let fee_rules = [];
+  try {
+    fee_rules = params.fee_rules ? JSON.parse(params.fee_rules) : [];
+  } catch (e) {
+    fee_rules = [];
+  }
+
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +93,24 @@ const BookingScreen = ({ route, navigation }) => {
     });
   };
 
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return 'N/A';
+    return `₹${Number(value).toFixed(2)}`;
+  };
+
+  const selectedVehicleData = vehicles.find((v) => v.registration_number === selectedVehicle);
+  const selectedVehicleType = selectedVehicleData?.type;
+  const selectedFeeRule = fee_rules.find((rule) => rule.vehicle_type === selectedVehicleType);
+
+  const expectedParkingCharge = selectedFeeRule
+    ? calculateExpectedCharge({
+      startTime: start_time,
+      endTime: end_time,
+      firstHourCharge: selectedFeeRule.first_hour_charge,
+      restHourCharge: selectedFeeRule.rest_hour_charge,
+    })
+    : null;
+
   const handleConfirmBooking = async () => {
     if (!selectedVehicle) {
       Alert.alert('Error', 'Please select a vehicle. Add one from the Vehicles screen if needed.');
@@ -68,7 +119,7 @@ const BookingScreen = ({ route, navigation }) => {
 
     Alert.alert(
       'Confirm Booking',
-      `Slot #${slot_no} at ${lot_name}\nVehicle: ${selectedVehicle}\nDeposit: ₹${BOOKING_DEPOSIT}\n\nProceed?`,
+      `Slot #${slot_no} at ${lot_name}\nVehicle: ${selectedVehicle}\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\nDeposit: ₹${BOOKING_DEPOSIT}\n\nProceed?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -78,7 +129,7 @@ const BookingScreen = ({ route, navigation }) => {
             try {
               const response = await bookingAPI.createBooking({
                 registration_number: selectedVehicle,
-                slot_id,
+                slot_id: slotId,
                 expected_start_time: start_time,
                 expected_end_time: end_time,
               });
@@ -86,11 +137,11 @@ const BookingScreen = ({ route, navigation }) => {
               if (response.data.success) {
                 Alert.alert(
                   'Booking Confirmed! ✅',
-                  `Your slot #${slot_no} at ${lot_name} has been booked.\nDeposit: ₹${BOOKING_DEPOSIT}`,
+                  `Your slot #${slot_no} at ${lot_name} has been booked.\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\nDeposit: ₹${BOOKING_DEPOSIT}`,
                   [
                     {
                       text: 'View Bookings',
-                      onPress: () => navigation.navigate('MyBookings'),
+                      onPress: () => router.push('/my-bookings'),
                     },
                   ]
                 );
@@ -131,6 +182,10 @@ const BookingScreen = ({ route, navigation }) => {
           <Text style={styles.label}>End Time</Text>
           <Text style={styles.value}>{formatDisplay(end_time)}</Text>
         </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Expected Parking Charge</Text>
+          <Text style={styles.value}>{formatCurrency(expectedParkingCharge)}</Text>
+        </View>
       </Surface>
 
       {/* Vehicle Selection */}
@@ -145,7 +200,7 @@ const BookingScreen = ({ route, navigation }) => {
             </Text>
             <Button
               mode="contained"
-              onPress={() => navigation.navigate('Vehicles')}
+              onPress={() => router.push('/vehicles')}
               style={styles.addVehicleBtn}
             >
               Add Vehicle
@@ -171,6 +226,16 @@ const BookingScreen = ({ route, navigation }) => {
       {/* Deposit Info */}
       <Surface style={styles.depositCard} elevation={2}>
         <View style={styles.depositRow}>
+          <Text style={styles.depositLabel}>Expected Parking Charge</Text>
+          <Text style={styles.depositAmount}>{formatCurrency(expectedParkingCharge)}</Text>
+        </View>
+        <Text style={styles.depositNote}>
+          Estimated from lot fee rules for your selected duration and vehicle type
+        </Text>
+
+        <Divider style={styles.depositDivider} />
+
+        <View style={styles.depositRow}>
           <Text style={styles.depositLabel}>Booking Deposit</Text>
           <Text style={styles.depositAmount}>₹{BOOKING_DEPOSIT}</Text>
         </View>
@@ -195,7 +260,7 @@ const BookingScreen = ({ route, navigation }) => {
       <View style={styles.bottomSpacer} />
     </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -269,6 +334,9 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 8,
   },
+  depositDivider: {
+    marginVertical: 10,
+  },
   confirmButton: {
     marginHorizontal: 16,
     borderRadius: 8,
@@ -281,5 +349,3 @@ const styles = StyleSheet.create({
     height: 30,
   },
 });
-
-export default BookingScreen;

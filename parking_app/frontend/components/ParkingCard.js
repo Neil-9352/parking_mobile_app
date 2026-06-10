@@ -3,7 +3,6 @@
  * Reusable card for displaying parking lot info
  */
 
-import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, Surface, Chip } from 'react-native-paper';
 

@@ -37,10 +37,25 @@ const getUserReceipts = async (req, res) => {
       [user_id]
     );
 
+    // Build an HTTP URL for each receipt so the mobile app can open it directly.
+    // The relative path in the DB is e.g. "receipts/receipt_xxx.pdf";
+    // we strip the leading "receipts/" segment because Express serves that
+    // directory under the /receipts route.
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const data = receipts.map((r) => {
+      let receiptUrl = null;
+      if (r.receipt_path) {
+        // DB value: "receipts/receipt_xxx.pdf" → filename: "receipt_xxx.pdf"
+        const filename = r.receipt_path.replace(/^receipts\//, '');
+        receiptUrl = `${baseUrl}/receipts/${filename}`;
+      }
+      return { ...r, receipt_path: receiptUrl };
+    });
+
     res.status(200).json({
       success: true,
       message: 'Receipts retrieved successfully',
-      data: receipts,
+      data,
     });
   } catch (error) {
     console.error('Get receipts error:', error);

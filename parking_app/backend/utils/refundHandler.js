@@ -44,7 +44,12 @@ const processVehicleExit = async (registration_number, slot_id, parking_record_i
     if (bookings.length > 0) {
       // Update booking status to COMPLETED and refund status to REFUNDED
       await connection.query(
-        "UPDATE books SET booking_status = 'COMPLETED', refund_status = 'REFUNDED' WHERE booking_id = ?",
+        `UPDATE books
+         SET booking_status = 'COMPLETED',
+             refund_status = 'REFUNDED',
+             refund_percentage = 100.00,
+             refund_amount = booking_amount
+         WHERE booking_id = ?`,
         [bookings[0].booking_id]
       );
     }
