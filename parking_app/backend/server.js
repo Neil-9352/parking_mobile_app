@@ -18,6 +18,7 @@ const receiptRoutes = require('./routes/receiptRoutes');
 // Import background jobs
 const { startNoShowJob } = require('./jobs/noShowJob');
 const { startSlotBookingLockJob } = require('./jobs/slotBookingLockJob');
+const { startPendingPaymentCleanupJob } = require('./jobs/pendingPaymentCleanupJob');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -77,6 +78,7 @@ app.listen(PORT, () => {
   // Start background jobs
   startNoShowJob();
   startSlotBookingLockJob();
+  startPendingPaymentCleanupJob();
 });
 
 module.exports = app;
