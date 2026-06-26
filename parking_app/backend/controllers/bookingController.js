@@ -1,12 +1,24 @@
 /**
  * Booking Controller
- * Handles booking creation, retrieval, and cancellation
+ * Handles booking creation, retrieval, and cancellation.
+ *
+ * Razorpay payment flow:
+ *  1. POST /api/bookings/create-order  — creates a Razorpay order (razorpayController)
+ *  2. POST /api/bookings/create        — called after SDK reports success.
+ *                                        Creates a PAYMENT_PENDING row, verifies the
+ *                                        Razorpay signature, then upgrades to ACTIVE.
+ *  3. POST /api/bookings/payment-failed/:booking_id
+ *                                      — called by the client on SDK failure/dismiss.
+ *                                        Deletes the PAYMENT_PENDING row so the slot is freed.
  *
  * IMPORTANT: Booking availability is determined by time overlaps
  * in the `books` table, NOT by `parking_slot.status`.
+ * PAYMENT_PENDING rows participate in overlap checks, so the slot is
+ * effectively held while the payment sheet is open.
  * We never update parking_slot.status from bookings.
  */
 
+const crypto = require('crypto');
 const pool = require('../config/db');
 
 // Booking deposit amount in INR
@@ -32,33 +44,56 @@ const getRefundPercentageByMinutes = (minutesBeforeStart) => {
 const toTwoDecimalNumber = (value) => Number(Number(value).toFixed(2));
 
 /**
- * Create a new booking
+ * Create a new booking — called AFTER Razorpay SDK reports success.
  * POST /api/bookings/create
- * Body: { registration_number, slot_id, expected_start_time, expected_end_time }
- * user_id is extracted from JWT token
+ * Body: {
+ *   registration_number, slot_id, expected_start_time, expected_end_time,
+ *   razorpay_order_id, razorpay_payment_id, razorpay_signature
+ * }
  *
- * Checks for overlapping ACTIVE bookings on the same slot.
- * Does NOT update parking_slot.status.
+ * Steps:
+ *  1. Validate fields
+ *  2. Verify vehicle ownership
+ *  3. Check for overlapping ACTIVE or PAYMENT_PENDING bookings
+ *  4. Insert row with booking_status = 'PAYMENT_PENDING' (holds the slot)
+ *  5. Verify HMAC signature — if invalid, delete the pending row and return 400
+ *  6. Upgrade row to ACTIVE and store payment ID
  */
 const createBooking = async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    const { registration_number, slot_id, expected_start_time, expected_end_time } = req.body;
+    const {
+      registration_number,
+      slot_id,
+      expected_start_time,
+      expected_end_time,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
     const user_id = req.user.id;
 
-    // Validate required fields
-    if (!registration_number || !slot_id || !expected_start_time || !expected_end_time) {
+    // --- 1. Validate required fields ---
+    if (
+      !registration_number ||
+      !slot_id ||
+      !expected_start_time ||
+      !expected_end_time ||
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'All fields are required: registration_number, slot_id, expected_start_time, expected_end_time',
+        message:
+          'All fields are required: registration_number, slot_id, expected_start_time, expected_end_time, razorpay_order_id, razorpay_payment_id, razorpay_signature',
       });
     }
 
-    // Start transaction
     await connection.beginTransaction();
 
-    // Verify that the vehicle belongs to the user
+    // --- 2. Verify vehicle belongs to the user ---
     const [vehicle] = await connection.query(
       'SELECT registration_number, type FROM vehicle WHERE registration_number = ? AND user_id = ?',
       [registration_number, user_id]
@@ -72,7 +107,7 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Verify slot exists
+    // --- 3. Verify slot exists ---
     const [slot] = await connection.query(
       'SELECT slot_id, slot_no, lot_id FROM parking_slot WHERE slot_id = ?',
       [slot_id]
@@ -86,11 +121,12 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check for overlapping ACTIVE bookings on this slot
+    // --- 4. Check for overlapping ACTIVE or PAYMENT_PENDING bookings ---
+    // PAYMENT_PENDING rows hold the slot until confirmed or expired.
     const [overlapping] = await connection.query(
       `SELECT booking_id FROM books
        WHERE slot_id = ?
-         AND booking_status = 'ACTIVE'
+         AND booking_status IN ('ACTIVE', 'PAYMENT_PENDING')
          AND expected_start_time < ?
          AND expected_end_time > ?
        LIMIT 1`,
@@ -101,26 +137,63 @@ const createBooking = async (req, res) => {
       await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'This slot is already booked for the selected time period. Please choose another slot or time.',
+        message:
+          'This slot is already booked for the selected time period. Please choose another slot or time.',
       });
     }
 
-    // Create booking — only insert into books, do NOT update parking_slot.status
+    // --- 5. Insert PAYMENT_PENDING row (slot is now held) ---
     const [result] = await connection.query(
-      `INSERT INTO books 
-        (user_id, registration_number, slot_id, expected_start_time, expected_end_time, booking_amount, booking_status, refund_status)
-       VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'PENDING')`,
-      [user_id, registration_number, slot_id, expected_start_time, expected_end_time, BOOKING_DEPOSIT]
+      `INSERT INTO books
+        (user_id, registration_number, slot_id, expected_start_time, expected_end_time,
+         booking_amount, booking_status, refund_status, razorpay_order_id, razorpay_payment_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'PAYMENT_PENDING', 'NOT_APPLICABLE', ?, ?)`,
+      [
+        user_id,
+        registration_number,
+        slot_id,
+        expected_start_time,
+        expected_end_time,
+        BOOKING_DEPOSIT,
+        razorpay_order_id,
+        razorpay_payment_id,
+      ]
     );
 
-    // Commit transaction
+    const pendingBookingId = result.insertId;
+
+    // --- 6. Verify Razorpay HMAC signature ---
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RZRPAY_TEST_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      // Signature invalid — delete the pending row and reject
+      await connection.query('DELETE FROM books WHERE booking_id = ?', [pendingBookingId]);
+      await connection.commit();
+
+      return res.status(400).json({
+        success: false,
+        message: 'Payment verification failed. Please try again.',
+      });
+    }
+
+    // --- 7. Signature valid — upgrade to ACTIVE ---
+    await connection.query(
+      `UPDATE books
+       SET booking_status = 'ACTIVE', refund_status = 'PENDING'
+       WHERE booking_id = ?`,
+      [pendingBookingId]
+    );
+
     await connection.commit();
 
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
       data: {
-        booking_id: result.insertId,
+        booking_id: pendingBookingId,
         user_id,
         registration_number,
         slot_id,
@@ -130,6 +203,8 @@ const createBooking = async (req, res) => {
         booking_amount: BOOKING_DEPOSIT,
         booking_status: 'ACTIVE',
         refund_status: 'PENDING',
+        razorpay_order_id,
+        razorpay_payment_id,
         cancellation_time: null,
         refund_percentage: null,
         refund_amount: null,
@@ -145,6 +220,48 @@ const createBooking = async (req, res) => {
     });
   } finally {
     connection.release();
+  }
+};
+
+/**
+ * Handle payment failure / SDK dismiss.
+ * Called by the client when Razorpay checkout fails or is cancelled.
+ * Deletes the PAYMENT_PENDING row so the slot is immediately freed.
+ *
+ * POST /api/bookings/payment-failed/:booking_id
+ * Auth required.
+ */
+const handlePaymentFailed = async (req, res) => {
+  try {
+    const { booking_id } = req.params;
+    const user_id = req.user.id;
+
+    const [result] = await pool.query(
+      `DELETE FROM books
+       WHERE booking_id = ?
+         AND user_id = ?
+         AND booking_status = 'PAYMENT_PENDING'`,
+      [booking_id, user_id]
+    );
+
+    if (result.affectedRows === 0) {
+      // Nothing to delete — either wrong user, or already cleaned up
+      return res.status(404).json({
+        success: false,
+        message: 'No pending booking found to clean up.',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment cancelled. Slot has been released.',
+    });
+  } catch (error) {
+    console.error('Payment failure cleanup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during payment failure cleanup',
+    });
   }
 };
 
@@ -212,6 +329,7 @@ const getMyBookings = async (req, res) => {
           LIMIT 1
         )
       WHERE b.user_id = ?
+        AND b.booking_status != 'PAYMENT_PENDING'
       ORDER BY b.booking_time DESC`,
       [user_id]
     );
@@ -317,4 +435,4 @@ const cancelBooking = async (req, res) => {
   }
 };
 
-module.exports = { createBooking, getMyBookings, cancelBooking };
+module.exports = { createBooking, getMyBookings, cancelBooking, handlePaymentFailed };

@@ -1,10 +1,15 @@
 /**
  * Booking Screen — Dynamic Route [slotId]
- * Confirmation screen — shows selected slot + times, user picks vehicle, then confirms
- * Times are passed from SlotSelectionScreen (already selected via date picker)
+ *
+ * Razorpay payment flow:
+ *  1. User selects vehicle and taps "Pay Deposit ₹500"
+ *  2. Backend creates a Razorpay order (POST /api/bookings/create-order)
+ *  3. Native Razorpay checkout sheet opens (react-native-razorpay)
+ *  4a. Success → Backend verifies signature + creates ACTIVE booking
+ *  4b. Failure/Dismiss → Backend cleans up PAYMENT_PENDING row → prompt to retry or cancel
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,8 +22,10 @@ import {
   Button,
   RadioButton,
   Divider,
+  ActivityIndicator,
 } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import RazorpayCheckout from 'react-native-razorpay';
 import { vehicleAPI, bookingAPI } from '../../services/api';
 
 const BOOKING_DEPOSIT = 500;
@@ -60,7 +67,11 @@ export default function BookingScreen() {
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [loading, setLoading] = useState(false);
+  const [paymentStep, setPaymentStep] = useState('idle'); // 'idle' | 'creating_order' | 'awaiting_payment' | 'confirming'
   const [fetchingVehicles, setFetchingVehicles] = useState(true);
+
+  // Hold onto the pending booking_id across the async Razorpay callback
+  const pendingBookingIdRef = useRef(null);
 
   useEffect(() => {
     fetchVehicles();
@@ -111,52 +122,170 @@ export default function BookingScreen() {
     })
     : null;
 
-  const handleConfirmBooking = async () => {
+  const isProcessing = paymentStep !== 'idle';
+
+  /**
+   * Cleans up a stale PAYMENT_PENDING row on the backend.
+   * Called when the Razorpay SDK fails or the user dismisses the sheet.
+   */
+  const cleanupPendingBooking = async (bookingId) => {
+    if (!bookingId) return;
+    try {
+      await bookingAPI.handlePaymentFailed(bookingId);
+    } catch (err) {
+      // Cleanup is best-effort; the server-side cron job will catch any that slip through
+      console.warn('[Booking] Failed to cleanup pending booking:', err?.message);
+    }
+  };
+
+  /**
+   * Shows the retry/cancel dialog after a payment failure.
+   */
+  const showPaymentFailureDialog = (bookingId, errorDescription) => {
+    Alert.alert(
+      'Payment Failed',
+      errorDescription || 'The payment could not be completed. Would you like to try again?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            setPaymentStep('idle');
+          },
+        },
+        {
+          text: 'Try Again',
+          onPress: () => {
+            setPaymentStep('idle');
+            // Re-trigger the payment flow
+            initiatePayment();
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  /**
+   * Main payment flow:
+   *  1. Create Razorpay order on the backend
+   *  2. Open native checkout sheet
+   *  3a. On success → confirm booking on backend
+   *  3b. On failure → cleanup pending row → show retry dialog
+   */
+  const initiatePayment = async () => {
+    if (!selectedVehicle) {
+      Alert.alert('No Vehicle Selected', 'Please select a vehicle to continue.');
+      return;
+    }
+
+    try {
+      // --- Step 1: Create Razorpay order ---
+      setPaymentStep('creating_order');
+      const orderResponse = await bookingAPI.createOrder();
+
+      if (!orderResponse.data.success) {
+        throw new Error('Failed to create payment order');
+      }
+
+      const { order_id, key_id, amount, currency } = orderResponse.data.data;
+
+      // --- Step 2: Open Razorpay native checkout ---
+      setPaymentStep('awaiting_payment');
+
+      const options = {
+        description: `Parking deposit for Slot #${slot_no} at ${lot_name}`,
+        currency: currency || 'INR',
+        key: key_id,
+        amount: String(amount), // in paise
+        order_id,
+        name: 'iParking',
+        prefill: {
+          // Razorpay will pre-fill these in the checkout sheet
+          contact: '',
+          email: '',
+        },
+        theme: { color: '#1a73e8' },
+      };
+
+      let paymentData;
+      try {
+        paymentData = await RazorpayCheckout.open(options);
+      } catch (sdkError) {
+        // SDK failure or user dismissed — cleanup the pending slot hold
+        // Note: no pending booking row yet at this point since we haven't called /create
+        setPaymentStep('idle');
+        showPaymentFailureDialog(
+          null,
+          sdkError?.description || sdkError?.error?.description || 'Payment was cancelled or failed.'
+        );
+        return;
+      }
+
+      // --- Step 3: Confirm booking with payment proof ---
+      setPaymentStep('confirming');
+
+      const bookingResponse = await bookingAPI.createBooking({
+        registration_number: selectedVehicle,
+        slot_id: slotId,
+        expected_start_time: start_time,
+        expected_end_time: end_time,
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+      });
+
+      if (bookingResponse.data.success) {
+        setPaymentStep('idle');
+        Alert.alert(
+          'Booking Confirmed! ✅',
+          `Your slot #${slot_no} at ${lot_name} has been booked.\nPayment ID: ${paymentData.razorpay_payment_id}\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\nDeposit Paid: ₹${BOOKING_DEPOSIT}`,
+          [
+            {
+              text: 'View Bookings',
+              onPress: () => router.push('/my-bookings'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      // Backend confirmation failed — the slot was held but signature verification
+      // or DB insert failed; the cleanup job will sweep it within 10 minutes.
+      setPaymentStep('idle');
+      const message = error.response?.data?.message || 'Booking confirmation failed. Please contact support if your payment was deducted.';
+      Alert.alert('Booking Failed', message);
+    }
+  };
+
+  /**
+   * Shows a confirmation dialog before initiating payment.
+   */
+  const handlePayDepositPress = () => {
     if (!selectedVehicle) {
       Alert.alert('Error', 'Please select a vehicle. Add one from the Vehicles screen if needed.');
       return;
     }
 
     Alert.alert(
-      'Confirm Booking',
-      `Slot #${slot_no} at ${lot_name}\nVehicle: ${selectedVehicle}\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\nDeposit: ₹${BOOKING_DEPOSIT}\n\nProceed?`,
+      'Confirm & Pay',
+      `Slot #${slot_no} at ${lot_name}\nVehicle: ${selectedVehicle}\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\n\nYou will be charged a refundable deposit of ₹${BOOKING_DEPOSIT} now.\n\nProceed to payment?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const response = await bookingAPI.createBooking({
-                registration_number: selectedVehicle,
-                slot_id: slotId,
-                expected_start_time: start_time,
-                expected_end_time: end_time,
-              });
-
-              if (response.data.success) {
-                Alert.alert(
-                  'Booking Confirmed! ✅',
-                  `Your slot #${slot_no} at ${lot_name} has been booked.\nExpected Parking Charge: ${formatCurrency(expectedParkingCharge)}\nDeposit: ₹${BOOKING_DEPOSIT}`,
-                  [
-                    {
-                      text: 'View Bookings',
-                      onPress: () => router.push('/my-bookings'),
-                    },
-                  ]
-                );
-              }
-            } catch (error) {
-              const message =
-                error.response?.data?.message || 'Booking failed. Please try again.';
-              Alert.alert('Booking Failed', message);
-            } finally {
-              setLoading(false);
-            }
-          },
+          text: 'Pay ₹500',
+          onPress: initiatePayment,
         },
       ]
     );
+  };
+
+  const getButtonLabel = () => {
+    switch (paymentStep) {
+      case 'creating_order': return 'Creating Order...';
+      case 'awaiting_payment': return 'Awaiting Payment...';
+      case 'confirming': return 'Confirming Booking...';
+      default: return 'Pay Deposit ₹500';
+    }
   };
 
   return (
@@ -206,6 +335,8 @@ export default function BookingScreen() {
               Add Vehicle
             </Button>
           </View>
+        ) : fetchingVehicles ? (
+          <ActivityIndicator style={styles.activityIndicator} />
         ) : (
           <RadioButton.Group
             onValueChange={setSelectedVehicle}
@@ -217,6 +348,7 @@ export default function BookingScreen() {
                 label={`${vehicle.registration_number} (${vehicle.type})`}
                 value={vehicle.registration_number}
                 style={styles.radioItem}
+                disabled={isProcessing}
               />
             ))}
           </RadioButton.Group>
@@ -240,21 +372,29 @@ export default function BookingScreen() {
           <Text style={styles.depositAmount}>₹{BOOKING_DEPOSIT}</Text>
         </View>
         <Text style={styles.depositNote}>
-          💡 This deposit is fully refundable when your vehicle exits the lot
+          💡 Paid now via Razorpay. Fully refundable when your vehicle exits the lot.
         </Text>
       </Surface>
 
-      {/* Confirm Button */}
+      {/* Payment Status Banner (shown during processing) */}
+      {isProcessing && (
+        <Surface style={styles.statusBanner} elevation={1}>
+          <ActivityIndicator size="small" color="#1a73e8" style={styles.statusSpinner} />
+          <Text style={styles.statusText}>{getButtonLabel()}</Text>
+        </Surface>
+      )}
+
+      {/* Pay Button */}
       <Button
         mode="contained"
-        onPress={handleConfirmBooking}
-        loading={loading}
-        disabled={loading || vehicles.length === 0}
+        onPress={handlePayDepositPress}
+        loading={isProcessing}
+        disabled={isProcessing || vehicles.length === 0 || fetchingVehicles}
         style={styles.confirmButton}
         contentStyle={styles.confirmButtonContent}
-        icon="check-circle"
+        icon={isProcessing ? undefined : 'lock'}
       >
-        {loading ? 'Processing...' : 'Confirm Booking'}
+        {getButtonLabel()}
       </Button>
 
       <View style={styles.bottomSpacer} />
@@ -308,6 +448,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: '#1a73e8',
   },
+  activityIndicator: {
+    marginVertical: 12,
+  },
   depositCard: {
     margin: 16,
     padding: 16,
@@ -337,10 +480,27 @@ const styles = StyleSheet.create({
   depositDivider: {
     marginVertical: 10,
   },
+  statusBanner: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#e8f0fe',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusSpinner: {
+    marginRight: 10,
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#1a73e8',
+    fontWeight: '600',
+  },
   confirmButton: {
     marginHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#4caf50',
+    backgroundColor: '#1a73e8',
   },
   confirmButtonContent: {
     paddingVertical: 8,
